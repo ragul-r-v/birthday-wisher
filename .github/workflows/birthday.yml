@@ -23,16 +23,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Decode birthdays CSV
-        run: python3 -c "
-          import base64, os
-          data = os.environ['BIRTHDAYS_CSV']
-          decoded = base64.b64decode(data).decode('utf-8')
-          with open('birthdays.csv', 'w') as f:
-              f.write(decoded)
-          print('Lines written:', decoded.count('\n'))
-          "
         env:
           BIRTHDAYS_CSV: ${{ secrets.BIRTHDAYS_CSV }}
+        run: python decode_csv.py
 
       - name: Run birthday wisher
         env:
