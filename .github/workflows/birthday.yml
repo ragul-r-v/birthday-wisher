@@ -23,7 +23,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Decode birthdays CSV
-        run: echo "${{ secrets.BIRTHDAYS_CSV }}" | base64 --decode > birthdays.csv
+        run: |
+          echo "${{ secrets.BIRTHDAYS_CSV }}" | tr -d ' \n\r' | base64 --decode > birthdays.csv
+          echo "CSV lines: $(wc -l < birthdays.csv)"
 
       - name: Run birthday wisher
         env:
