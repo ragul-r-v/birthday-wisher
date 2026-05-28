@@ -1,17 +1,9 @@
 # Python cache
-
-**pycache**/
-
+__pycache__/
 # Environment files
-
 .env
-
 # VS Code settings
-
 .vscode/
-
 # Logs
-
 *.log
-
-birthdays.csv
+secret.txt
