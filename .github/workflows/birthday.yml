@@ -22,9 +22,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Decode birthdays CSV
+      - name: Create birthdays CSV
         run: |
-          echo "${{ secrets.BIRTHDAYS_CSV }}" | tr -d ' \n\r' | base64 --decode > birthdays.csv
+          cat << 'CSVEOF' > birthdays.csv
+          ${{ secrets.BIRTHDAYS_CSV }}
+          CSVEOF
           echo "CSV lines: $(wc -l < birthdays.csv)"
 
       - name: Run birthday wisher
