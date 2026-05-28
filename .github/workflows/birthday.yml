@@ -7,7 +7,6 @@ jobs:
 send-birthday-mails:
 runs-on: ubuntu-latest
 
-```
 steps:
   - uses: actions/checkout@v4
 
@@ -21,4 +20,3 @@ steps:
       EMAIL: ${{ secrets.EMAIL }}
       PASSWORD: ${{ secrets.PASSWORD }}
     run: python main.py
-```
