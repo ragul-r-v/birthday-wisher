@@ -22,19 +22,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Debug secret
+      - name: Decode birthdays CSV
         env:
-          BIRTHDAYS_CSV: ${{ secrets.BIRTHDAYS_CSV }}
+          BIRTHDAYS_CSV: ${{ vars.BIRTHDAYS_CSV_DATA }}
         run: python decode_csv.py
-
-      - name: Check CSV
-        run: |
-          echo "File exists check:"
-          ls -la birthdays.csv
-          echo "Line count:"
-          wc -l birthdays.csv
-          echo "First line:"
-          head -1 birthdays.csv
 
       - name: Run birthday wisher
         env:
