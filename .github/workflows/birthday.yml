@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      TZ: 'Asia/Kolkata'
 
     steps:
       - uses: actions/checkout@v4.2.2
@@ -24,11 +24,11 @@ jobs:
 
       - name: Decode birthdays CSV
         env:
-          BIRTHDAYS_CSV: ${{ vars.BIRTHDAYS_CSV_DATA }}
+          BIRTHDAYS_CSV: ${{ secrets.BIRTHDAYS_CSV_DATA || secrets.BIRTHDAYS_CSV || vars.BIRTHDAYS_CSV_DATA || vars.BIRTHDAYS_CSV }}
         run: python decode_csv.py
 
       - name: Run birthday wisher
         env:
           EMAIL: ${{ secrets.EMAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
-        run: python main.py
+        run: python main.py
