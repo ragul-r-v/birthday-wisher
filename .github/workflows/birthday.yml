@@ -3,7 +3,7 @@ name: Birthday Wisher
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 1 * * *'  # 7:00 AM IST
+    - cron: '27 0 * * *'  # 5:57 AM IST (~6:00 AM IST)
 
 jobs:
   send-birthday-mails:
