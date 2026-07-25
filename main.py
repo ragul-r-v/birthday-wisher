@@ -4,6 +4,7 @@ import pandas
 import random
 import smtplib
 import sys
+from email.message import EmailMessage
 
 # Ensure timezone is IST (Asia/Kolkata) matching the workflow schedule (7:00 AM IST)
 try:
@@ -18,6 +19,9 @@ MY_PASSWORD = os.environ.get("PASSWORD")
 if not MY_EMAIL or not MY_PASSWORD:
     print("ERROR: EMAIL or PASSWORD environment variables are missing from secrets.")
     sys.exit(1)
+
+MY_EMAIL = MY_EMAIL.strip()
+MY_PASSWORD = MY_PASSWORD.strip()
 
 print(f"Running Birthday Wisher for date: {today.strftime('%Y-%m-%d')} (Month: {today.month}, Day: {today.day})")
 
@@ -51,13 +55,13 @@ try:
                 contents = letter_file.read()
                 contents = contents.replace("[NAME]", str(birthday_person["name"]).strip())
 
-            msg = f"From: {MY_EMAIL}\nTo: {birthday_person['email']}\nSubject: Happy Birthday!\n\n{contents}"
+            msg = EmailMessage()
+            msg["From"] = MY_EMAIL
+            msg["To"] = birthday_person["email"]
+            msg["Subject"] = "Happy Birthday! 🎉"
+            msg.set_content(contents)
 
-            connection.sendmail(
-                from_addr=MY_EMAIL,
-                to_addrs=birthday_person["email"],
-                msg=msg.encode("utf-8")
-            )
+            connection.send_message(msg)
 
             print(f"Email sent successfully to {birthday_person['name']} <{birthday_person['email']}>")
 
