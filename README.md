@@ -50,6 +50,7 @@
 - 🎨 **Randomized Greeting Templates**: Picks from multiple pre-formatted letter templates to keep wishes fresh and unique.
 - 🌐 **Timezone-Aware Execution**: Evaluates dates in **Asia/Kolkata (IST)** so birthdays are never missed or miscalculated due to UTC shifts.
 - 📧 **Secure Gmail SMTP Integration**: Transmits encrypted TLS emails using modern Python `EmailMessage` standard.
+- 📢 **Daily Birthday Alert Notification**: Automatically forwards a summary notification email to `t.v.malathi2001@gmail.com` whenever birthdays are detected today.
 - 🧪 **Manual Dispatch Enabled**: Allows on-demand workflow triggering directly from GitHub UI.
 
 ---
@@ -64,10 +65,11 @@ flowchart TD
     D --> E[🎯 main.py: Read Today's Date in IST]
     E --> F{🎂 Matching Birthday Today?}
     F -- No --> G[✅ Exit Cleanly - No Emails Sent]
-    F -- Yes --> H[🎲 Pick Random Letter Template]
-    H --> I[✉️ Format Personalized Email Body]
-    I --> J[🔒 Authenticate via Gmail SMTP TLS]
-    J --> K[🚀 Send Email & Log Status]
+    F -- Yes --> H[🎲 Pick Random Letter Template & Send Wishes]
+    H --> I[🔒 Authenticate via Gmail SMTP TLS]
+    I --> J[✉️ Send Personalized Wishes to Recipients]
+    J --> K[📢 Forward Alert Email to t.v.malathi2001@gmail.com]
+    K --> L[🚀 Complete Execution & Log Status]
 ```
 
 ---
