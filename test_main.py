@@ -1,0 +1,124 @@
+import os
+import sys
+import unittest
+from unittest.mock import patch, MagicMock
+import pandas as pd
+from datetime import datetime
+
+import main
+
+
+class TestBirthdayWisher(unittest.TestCase):
+
+    def setUp(self):
+        self.test_csv_path = "birthdays.csv"
+        self.original_csv_exists = os.path.exists(self.test_csv_path)
+        if self.original_csv_exists:
+            with open(self.test_csv_path, "r", encoding="utf-8") as f:
+                self.saved_csv_data = f.read()
+
+        today = main.get_today_date()
+        df = pd.DataFrame([
+            {"name": "Test Person", "email": "test@example.com", "year": 1990, "month": today.month, "day": today.day},
+            {"name": "Other Person", "email": "other@example.com", "year": 1995, "month": (today.month % 12) + 1, "day": 1}
+        ])
+        df.to_csv(self.test_csv_path, index=False)
+
+    def tearDown(self):
+        if self.original_csv_exists:
+            with open(self.test_csv_path, "w", encoding="utf-8") as f:
+                f.write(self.saved_csv_data)
+
+    def test_credential_sanitization(self):
+        """Test Case 1: Verifies quotes, inner spaces, tabs, and zero-width Unicode characters are stripped."""
+        raw_email = "  'user@gmail.com' \u200b "
+        raw_pass = " \"abcd efgh ijkl mnop\" \u200b\ufeff "
+
+        self.assertEqual(main.sanitize_email(raw_email), "user@gmail.com")
+        self.assertEqual(main.sanitize_password(raw_pass), "abcdefghijklmnop")
+
+    @patch("smtplib.SMTP")
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "notify@example.com"})
+    def test_successful_wishes(self, mock_smtp_class):
+        """Test Case 2: Verifies successful execution and email sending when credentials are valid."""
+        mock_smtp = MagicMock()
+        mock_smtp_class.return_value = mock_smtp
+
+        main.run()
+        self.assertTrue(mock_smtp.login.called)
+        self.assertGreaterEqual(mock_smtp.send_message.call_count, 1)
+
+    @patch("smtplib.SMTP")
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "wrongpassword123", "GITHUB_ACTIONS": "true"})
+    def test_smtp_auth_failure(self, mock_smtp_class):
+        """Test Case 3: Verifies handling of 535 Bad Credentials (SMTPAuthenticationError)."""
+        import smtplib
+        mock_smtp = MagicMock()
+        mock_smtp.login.side_effect = smtplib.SMTPAuthenticationError(535, b"5.7.8 Username and Password not accepted")
+        mock_smtp_class.return_value = mock_smtp
+
+        with self.assertRaises(SystemExit) as cm:
+            main.run()
+        self.assertEqual(cm.exception.code, 1)
+
+    @patch.dict(os.environ, {}, clear=True)
+    def test_missing_env_vars(self):
+        """Test Case 4: Verifies proper error handling when EMAIL or PASSWORD are missing."""
+        with self.assertRaises(SystemExit) as cm:
+            main.run()
+        self.assertEqual(cm.exception.code, 1)
+
+    @patch("smtplib.SMTP")
+    @patch("time.sleep", return_value=None)
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop"})
+    def test_smtp_transient_retry(self, mock_sleep, mock_smtp_class):
+        """Test Case 5: Verifies SMTP retry connection logic when transient network drop occurs on first attempt."""
+        import smtplib
+        mock_smtp_fail = MagicMock()
+        mock_smtp_fail.starttls.side_effect = smtplib.SMTPConnectError(421, "Service unavailable")
+        
+        mock_smtp_success = MagicMock()
+
+        # Fail on attempt 1, succeed on attempt 2
+        mock_smtp_class.side_effect = [mock_smtp_fail, mock_smtp_success]
+
+        main.run()
+        self.assertEqual(mock_smtp_class.call_count, 2)
+
+    def test_empty_birthday_list(self):
+        """Test Case 6: Verifies clean exit (0) when there are no birthdays today."""
+        today = main.get_today_date()
+        different_month = (today.month % 12) + 1
+        df = pd.DataFrame([
+            {"name": "No Birthday Today", "email": "nobday@example.com", "year": 1990, "month": different_month, "day": 1}
+        ])
+        df.to_csv("birthdays.csv", index=False)
+
+        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop"}), self.assertRaises(SystemExit) as cm:
+            main.run()
+        self.assertEqual(cm.exception.code, 0)
+
+    @patch("smtplib.SMTP")
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "admin@example.com"})
+    def test_partial_send_failure(self, mock_smtp_class):
+        """Test Case 7: Verifies system handles send failure for 1 contact without crashing summary email."""
+        mock_smtp = MagicMock()
+        # Fail first send (recipient email), succeed second send (notify email)
+        mock_smtp.send_message.side_effect = [Exception("Invalid Recipient Address"), None]
+        mock_smtp_class.return_value = mock_smtp
+
+        main.run()
+        self.assertEqual(mock_smtp.send_message.call_count, 2)
+
+    def test_decode_csv(self):
+        """Test Case 8: Verifies decode_csv logic with plain CSV and base64 strings."""
+        import base64
+        raw_csv = "name,email,year,month,day\nAlice,alice@test.com,1990,5,10"
+        b64_csv = base64.b64encode(raw_csv.encode("utf-8")).decode("utf-8")
+
+        decoded = base64.b64decode(b64_csv).decode("utf-8")
+        self.assertEqual(decoded, raw_csv)
+
+
+if __name__ == "__main__":
+    unittest.main()

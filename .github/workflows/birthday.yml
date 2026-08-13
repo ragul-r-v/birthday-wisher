@@ -27,6 +27,9 @@ jobs:
           BIRTHDAYS_CSV: ${{ secrets.BIRTHDAYS_CSV_DATA || secrets.BIRTHDAYS_CSV || vars.BIRTHDAYS_CSV_DATA || vars.BIRTHDAYS_CSV }}
         run: python decode_csv.py
 
+      - name: Run unit tests
+        run: python -m unittest test_main.py
+
       - name: Run birthday wisher
         env:
           EMAIL: ${{ secrets.EMAIL }}

@@ -205,6 +205,9 @@ python main.py
 export EMAIL="yourname@gmail.com"
 export PASSWORD="your16charapppassword"
 python main.py
+
+# 5. Run Unit Tests (8 Test Cases)
+python -m unittest test_main.py
 ```
 
 ---
