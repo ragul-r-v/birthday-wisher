@@ -11,6 +11,10 @@ import main
 class TestBirthdayWisher(unittest.TestCase):
 
     def setUp(self):
+        # Suppress console print output during test execution for clean runner logs
+        self.print_patcher = patch("builtins.print")
+        self.mock_print = self.print_patcher.start()
+
         self.test_csv_path = "birthdays.csv"
         self.original_csv_exists = os.path.exists(self.test_csv_path)
         if self.original_csv_exists:
@@ -25,6 +29,7 @@ class TestBirthdayWisher(unittest.TestCase):
         df.to_csv(self.test_csv_path, index=False)
 
     def tearDown(self):
+        self.print_patcher.stop()
         if self.original_csv_exists:
             with open(self.test_csv_path, "w", encoding="utf-8") as f:
                 f.write(self.saved_csv_data)
