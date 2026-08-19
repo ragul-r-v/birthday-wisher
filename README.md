@@ -15,7 +15,7 @@
   <p>
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/GitHub_Actions-Automated-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" />
-    <img src="https://img.shields.io/badge/Gmail_SMTP-Enabled-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Gmail SMTP" />
+    <img src="https://img.shields.io/badge/Gmail_API-OAuth2-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Gmail API OAuth2" />
     <img src="https://img.shields.io/badge/Timezone-IST_(UTC%2B5%3A30)-FF9900?style=for-the-badge&logo=clock&logoColor=white" alt="Timezone IST" />
     <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
   </p>
@@ -49,7 +49,8 @@
 - 🔐 **Encrypted Database Support**: Decodes base64-encoded CSV datasets on the fly (`decode_csv.py`), protecting personal emails and dates from public exposure.
 - 🎨 **Randomized Greeting Templates**: Picks from multiple pre-formatted letter templates to keep wishes fresh and unique.
 - 🌐 **Timezone-Aware Execution**: Evaluates dates in **Asia/Kolkata (IST)** so birthdays are never missed or miscalculated due to UTC shifts.
-- 📧 **Secure Gmail SMTP Integration**: Transmits encrypted TLS emails using modern Python `EmailMessage` standard.
+- 📧 **Gmail API OAuth2 (Recommended)**: Uses long-lived OAuth2 refresh tokens — **no more 535 errors**. Falls back to SMTP App Password if not configured.
+- 🔄 **SMTP Fallback Support**: Legacy SMTP App Password mode still works as an automatic fallback.
 - 📢 **Daily Birthday Alert Notification**: Automatically forwards a summary notification email to `t.v.malathi2001@gmail.com` whenever birthdays are detected today.
 - 🧪 **Manual Dispatch Enabled**: Allows on-demand workflow triggering directly from GitHub UI.
 
@@ -66,10 +67,13 @@ flowchart TD
     E --> F{🎂 Matching Birthday Today?}
     F -- No --> G[✅ Exit Cleanly - No Emails Sent]
     F -- Yes --> H[🎲 Pick Random Letter Template & Send Wishes]
-    H --> I[🔒 Authenticate via Gmail SMTP TLS]
-    I --> J[✉️ Send Personalized Wishes to Recipients]
-    J --> K[📢 Forward Alert Email to t.v.malathi2001@gmail.com]
-    K --> L[🚀 Complete Execution & Log Status]
+    H --> I{🔐 Gmail API Token Available?}
+    I -- Yes --> J[🔑 Authenticate via OAuth2 Refresh Token]
+    I -- No --> K[🔒 Fallback: SMTP App Password]
+    J --> L[✉️ Send Personalized Wishes to Recipients]
+    K --> L
+    L --> M[📢 Forward Alert Email to Notification Address]
+    M --> N[🚀 Complete Execution & Log Status]
 ```
 
 ---
@@ -89,8 +93,11 @@ Automatic_Birthday_Wisher/
 │   └── letter_3.txt
 ├── birthdays.csv              # Birthday Dataset (Decoded at runtime)
 ├── decode_csv.py              # Decodes Base64 CSV secret into birthdays.csv
+├── gmail_auth.py              # Gmail API OAuth2 authentication helper
+├── setup_gmail_token.py       # One-time local script to generate OAuth2 token
 ├── main.py                    # Main Engine: Date checking & Email dispatcher
-├── requirements.txt           # Dependencies (pandas)
+├── requirements.txt           # Dependencies (pandas, google-api-python-client)
+├── SETUP_GMAIL_API.md         # Gmail API setup guide
 └── README.md                  # Comprehensive Documentation
 ```
 
@@ -98,16 +105,23 @@ Automatic_Birthday_Wisher/
 
 ## ⚡ Quick Start & Setup Guide
 
-### Step 1: Generate Google App Password
+### Step 1: Set Up Email Authentication
 
-> [!IMPORTANT]
-> Standard Gmail passwords **do not work** with SMTP due to Google security policies. You **must** generate a 16-character **App Password**.
+> [!TIP]
+> **Recommended: Gmail API (OAuth2)** — Permanent solution, no more 535 errors. Follow the [📖 SETUP_GMAIL_API.md](SETUP_GMAIL_API.md) guide (~10 min one-time setup).
+
+<details>
+<summary><b>Alternative: Google App Password (Legacy, may expire)</b></summary>
+
+> [!WARNING]
+> App Passwords can expire when you change your Google password or toggle 2FA. The Gmail API method above is strongly recommended.
 
 1. Log in to your Google Account at **[myaccount.google.com](https://myaccount.google.com/)**.
 2. Go to **Security** and ensure **2-Step Verification** is turned **ON**.
-3. In the top search bar, search for **App passwords** (or visit **[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)**).
+3. Search for **App passwords** (or visit **[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)**).
 4. Enter an app name (e.g. `GitHub Birthday Wisher`) and click **Create**.
 5. Copy the generated **16-character passcode** (e.g., `abcd efgh ijkl mnop`).
+</details>
 
 ---
 
@@ -142,6 +156,16 @@ To keep contact details private on GitHub, convert your CSV file to a Base64 str
 1. Open your repository on GitHub.
 2. Navigate to **Settings** > **Secrets and variables** > **Actions**.
 3. Add the following **Repository Secrets**:
+
+**If using Gmail API (Recommended):**
+
+| Secret Name | Value Description |
+| :--- | :--- |
+| `GMAIL_TOKEN_JSON` | OAuth2 token JSON (from `setup_gmail_token.py`) |
+| `GMAIL_CREDENTIALS_JSON` | OAuth client credentials JSON (from Google Cloud Console) |
+| `BIRTHDAYS_CSV_DATA` | Base64-encoded string or raw content of `birthdays.csv` |
+
+**If using App Password (Legacy):**
 
 | Secret Name | Value Description | Example |
 | :--- | :--- | :--- |
@@ -219,11 +243,14 @@ python -m unittest test_main.py
 
 <br/>
 
-**Cause:** You are using your normal Gmail login password instead of a Google App Password, or 2FA is disabled.
+**Cause:** App Password expired, or you're using a regular Gmail password, or 2FA was toggled.
 
-**Fix:**
+**Permanent Fix (Recommended):**
+Switch to **Gmail API with OAuth2** — follow [SETUP_GMAIL_API.md](SETUP_GMAIL_API.md). This eliminates 535 errors permanently.
+
+**Quick Fix (Temporary):**
 1. Enable 2-Step Verification on your Google Account.
-2. Generate an **App Password** at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+2. Generate a new **App Password** at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
 3. Update your `PASSWORD` secret in GitHub Repository Secrets.
 </details>
 

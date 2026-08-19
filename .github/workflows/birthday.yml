@@ -32,7 +32,9 @@ jobs:
 
       - name: Run birthday wisher
         env:
+          GMAIL_TOKEN_JSON: ${{ secrets.GMAIL_TOKEN_JSON }}
+          GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
           EMAIL: ${{ secrets.EMAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL || 't.v.malathi2001@gmail.com' }}
-        run: python main.py
+        run: python main.py

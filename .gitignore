@@ -7,3 +7,6 @@ __pycache__/
 # Logs
 *.log
 secret.txt
+# Gmail API OAuth2 credentials (never commit these)
+token.json
+credentials.json
