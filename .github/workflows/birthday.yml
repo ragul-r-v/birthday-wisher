@@ -36,5 +36,5 @@ jobs:
           GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
           EMAIL: ${{ secrets.EMAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
-          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL || 't.v.malathi2001@gmail.com' }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
         run: python main.py

@@ -17,10 +17,11 @@
     <img src="https://img.shields.io/badge/GitHub_Actions-Automated-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" />
     <img src="https://img.shields.io/badge/Gmail_API-OAuth2-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Gmail API OAuth2" />
     <img src="https://img.shields.io/badge/Timezone-IST_(UTC%2B5%3A30)-FF9900?style=for-the-badge&logo=clock&logoColor=white" alt="Timezone IST" />
+    <img src="https://img.shields.io/badge/Tests-10%2F10_Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white" alt="Tests Passing" />
     <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
   </p>
 
-  <p><b>Never miss a birthday again!</b> An intelligent, zero-maintenance cloud automation bot that scans your birthday database daily and sends personalized, randomly-templated birthday greetings automatically.</p>
+  <p><b>Never miss a birthday again!</b> An intelligent, zero-maintenance cloud automation bot that scans your birthday database daily and sends personalized, randomly-templated birthday greetings via Gmail — powered entirely by GitHub Actions.</p>
 
 </div>
 
@@ -32,12 +33,16 @@
 - [🏗️ System Architecture](#️-system-architecture)
 - [📂 Directory Structure](#-directory-structure)
 - [⚡ Quick Start & Setup Guide](#-quick-start--setup-guide)
-  - [Step 1: Generate Google App Password](#step-1-generate-google-app-password)
+  - [Step 1: Set Up Email Authentication](#step-1-set-up-email-authentication-gmail-api--oauth2)
   - [Step 2: Prepare Birthday Database](#step-2-prepare-birthday-database)
   - [Step 3: Configure GitHub Repository Secrets](#step-3-configure-github-repository-secrets)
-  - [Step 4: Enable & Test GitHub Actions Workflow](#step-4-enable--test-github-actions-workflow)
+  - [Step 4: Enable & Test the Workflow](#step-4-enable--test-the-workflow)
+- [🔐 Security & Privacy](#-security--privacy)
+- [📧 How Email Authentication Works](#-how-email-authentication-works)
 - [💌 Customizing Email Templates](#-customizing-email-templates)
+- [📢 Notification Summary Emails](#-notification-summary-emails)
 - [💻 Local Setup & Development](#-local-setup--development)
+- [🧪 Testing](#-testing)
 - [🛠️ Troubleshooting & FAQ](#️-troubleshooting--faq)
 - [📜 License](#-license)
 
@@ -45,14 +50,20 @@
 
 ## ✨ Features
 
-- ⏰ **Automated Daily Trigger**: Runs every morning at **7:00 AM IST** via GitHub Actions scheduled cron.
-- 🔐 **Encrypted Database Support**: Decodes base64-encoded CSV datasets on the fly (`decode_csv.py`), protecting personal emails and dates from public exposure.
-- 🎨 **Randomized Greeting Templates**: Picks from multiple pre-formatted letter templates to keep wishes fresh and unique.
-- 🌐 **Timezone-Aware Execution**: Evaluates dates in **Asia/Kolkata (IST)** so birthdays are never missed or miscalculated due to UTC shifts.
-- 📧 **Gmail API OAuth2 (Recommended)**: Uses long-lived OAuth2 refresh tokens — **no more 535 errors**. Falls back to SMTP App Password if not configured.
-- 🔄 **SMTP Fallback Support**: Legacy SMTP App Password mode still works as an automatic fallback.
-- 📢 **Daily Birthday Alert Notification**: Automatically forwards a summary notification email to `t.v.malathi2001@gmail.com` whenever birthdays are detected today.
-- 🧪 **Manual Dispatch Enabled**: Allows on-demand workflow triggering directly from GitHub UI.
+| Feature | Description |
+|---------|-------------|
+| ⏰ **Automated Daily Trigger** | Runs every morning at ~**6:00 AM IST** via GitHub Actions cron schedule. |
+| 🔑 **Gmail API OAuth2** | Uses long-lived OAuth2 refresh tokens that **never expire** — permanently eliminates 535 authentication errors. |
+| 🔄 **SMTP Fallback** | Automatically falls back to SMTP App Password if Gmail API credentials are not configured. |
+| 🔐 **Encrypted Database** | Birthday data is stored as a Base64-encoded secret — personal emails and dates are **never** exposed in the repository. |
+| 🎨 **Randomized Templates** | Picks from multiple letter templates to keep birthday greetings fresh and unique for each person. |
+| 🌐 **Timezone-Aware** | Uses **Asia/Kolkata (IST)** timezone evaluation so birthdays are never missed due to UTC shifts. |
+| 📢 **Notification Alerts** | Sends a summary email to a configurable notification address whenever birthdays are detected and wishes are sent. |
+| 🧪 **10 Unit Tests** | Comprehensive test suite covering both Gmail API and SMTP paths, sanitization, retries, and edge cases. |
+| 📊 **GitHub Job Summary** | Writes success/failure reports to the GitHub Actions Job Summary for easy monitoring. |
+| 🔁 **SMTP Retry Logic** | Automatically retries up to 3 times on transient network failures with exponential backoff. |
+| 🧹 **Input Sanitization** | Strips invisible Unicode characters, zero-width spaces, and quotes from credentials to prevent auth issues. |
+| 🧪 **Manual Dispatch** | Can be triggered on-demand from the GitHub Actions UI via `workflow_dispatch`. |
 
 ---
 
@@ -61,20 +72,33 @@
 ```mermaid
 flowchart TD
     A[⏰ GitHub Actions Cron / Manual Trigger] --> B[🐍 Setup Python 3.12 Environment]
-    B --> C[🔐 decode_csv.py: Decrypt BIRTHDAYS_CSV Secret]
-    C --> D[📄 Generate birthdays.csv]
-    D --> E[🎯 main.py: Read Today's Date in IST]
-    E --> F{🎂 Matching Birthday Today?}
-    F -- No --> G[✅ Exit Cleanly - No Emails Sent]
-    F -- Yes --> H[🎲 Pick Random Letter Template & Send Wishes]
-    H --> I{🔐 Gmail API Token Available?}
-    I -- Yes --> J[🔑 Authenticate via OAuth2 Refresh Token]
-    I -- No --> K[🔒 Fallback: SMTP App Password]
-    J --> L[✉️ Send Personalized Wishes to Recipients]
-    K --> L
-    L --> M[📢 Forward Alert Email to Notification Address]
-    M --> N[🚀 Complete Execution & Log Status]
+    B --> C[📦 Install Dependencies]
+    C --> D[🔐 decode_csv.py: Decode Birthday Database]
+    D --> E[🧪 Run Unit Tests]
+    E --> F[🎯 main.py: Read Today's Date in IST]
+    F --> G{🎂 Matching Birthday Today?}
+    G -- No --> H[✅ Exit Cleanly - No Emails Sent]
+    G -- Yes --> I[🎲 Pick Random Letter Template]
+    I --> J{🔐 Gmail API Token Available?}
+    J -- Yes --> K[🔑 Authenticate via OAuth2 Refresh Token]
+    J -- No --> L[🔒 Fallback: SMTP App Password]
+    K --> M[✉️ Send Personalized Birthday Wishes]
+    L --> M
+    M --> N[📢 Send Notification Summary Email]
+    N --> O[📊 Write GitHub Job Summary]
+    O --> P[🚀 Complete Execution]
 ```
+
+### Workflow Steps Explained
+
+1. **Environment Setup** — GitHub Actions provisions an Ubuntu runner with Python 3.12 and installs dependencies from `requirements.txt`.
+2. **Database Decoding** — `decode_csv.py` reads the encrypted `BIRTHDAYS_CSV_DATA` secret, decodes it (Base64 or plain text), and writes `birthdays.csv`.
+3. **Unit Tests** — All 10 test cases run to verify code integrity before sending any emails.
+4. **Birthday Matching** — `main.py` reads today's date in IST and filters `birthdays.csv` for matching month + day entries.
+5. **Authentication** — If `GMAIL_TOKEN_JSON` is available, authenticates via Gmail API OAuth2. Otherwise, falls back to SMTP with App Password.
+6. **Email Dispatch** — For each birthday person, a random letter template is selected, personalized with the recipient's name, and sent.
+7. **Notification** — A summary email is sent to the configured notification address listing all birthdays and send results.
+8. **Reporting** — Success/failure details are written to the GitHub Actions Job Summary for easy monitoring.
 
 ---
 
@@ -84,52 +108,68 @@ flowchart TD
 Automatic_Birthday_Wisher/
 ├── .github/
 │   └── workflows/
-│       └── birthday.yml       # GitHub Actions Cron & Dispatch Workflow
+│       └── birthday.yml          # GitHub Actions workflow (cron + manual dispatch)
 ├── assets/
-│   └── banner.png             # Repository Banner Header Image
-├── letter_templates/          # Customizable Birthday Message Templates
+│   └── banner.png                # Repository banner image
+├── letter_templates/             # Customizable birthday message templates
 │   ├── letter_1.txt
 │   ├── letter_2.txt
 │   └── letter_3.txt
-├── birthdays.csv              # Birthday Dataset (Decoded at runtime)
-├── decode_csv.py              # Decodes Base64 CSV secret into birthdays.csv
-├── gmail_auth.py              # Gmail API OAuth2 authentication helper
-├── setup_gmail_token.py       # One-time local script to generate OAuth2 token
-├── main.py                    # Main Engine: Date checking & Email dispatcher
-├── requirements.txt           # Dependencies (pandas, google-api-python-client)
-├── SETUP_GMAIL_API.md         # Gmail API setup guide
-└── README.md                  # Comprehensive Documentation
+├── birthdays.csv                 # Birthday database (decoded at runtime, NOT committed)
+├── decode_csv.py                 # Decodes Base64/plain CSV from secrets into birthdays.csv
+├── gmail_auth.py                 # Gmail API OAuth2 authentication helper module
+├── setup_gmail_token.py          # One-time local script to generate OAuth2 refresh token
+├── main.py                       # Core engine: date matching, email dispatch, notifications
+├── test_main.py                  # Unit test suite (10 test cases)
+├── requirements.txt              # Python dependencies
+├── SETUP_GMAIL_API.md            # Detailed Gmail API setup instructions
+├── .gitignore                    # Excludes credentials, tokens, and cache files
+└── README.md                     # This file
 ```
+
+> [!CAUTION]
+> **Never commit** `credentials.json`, `token.json`, or `secret.txt` to the repository. These files contain sensitive OAuth tokens and are excluded via `.gitignore`.
 
 ---
 
 ## ⚡ Quick Start & Setup Guide
 
-### Step 1: Set Up Email Authentication
+### Step 1: Set Up Email Authentication (Gmail API + OAuth2)
 
 > [!TIP]
-> **Recommended: Gmail API (OAuth2)** — Permanent solution, no more 535 errors. Follow the [📖 SETUP_GMAIL_API.md](SETUP_GMAIL_API.md) guide (~10 min one-time setup).
+> **Gmail API with OAuth2** is the recommended method. It uses permanent refresh tokens that auto-renew — you'll **never** see 535 authentication errors again.
+
+Follow the step-by-step guide in **[📖 SETUP_GMAIL_API.md](SETUP_GMAIL_API.md)** to:
+
+1. Create a Google Cloud project
+2. Enable the Gmail API
+3. Create OAuth2 credentials (Desktop app)
+4. Run `setup_gmail_token.py` locally to generate your refresh token
+5. Save the token and credentials as GitHub repository secrets
+
+**Estimated time:** ~10 minutes (one-time setup).
 
 <details>
-<summary><b>Alternative: Google App Password (Legacy, may expire)</b></summary>
+<summary><b>📌 Alternative: Google App Password (Legacy — not recommended)</b></summary>
+
+<br/>
 
 > [!WARNING]
-> App Passwords can expire when you change your Google password or toggle 2FA. The Gmail API method above is strongly recommended.
+> App Passwords expire when you change your Google password, disable 2FA, or when Google revokes them. This method will cause recurring **535 Bad Credentials** errors. Use Gmail API OAuth2 instead.
 
 1. Log in to your Google Account at **[myaccount.google.com](https://myaccount.google.com/)**.
-2. Go to **Security** and ensure **2-Step Verification** is turned **ON**.
+2. Go to **Security** → ensure **2-Step Verification** is **ON**.
 3. Search for **App passwords** (or visit **[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)**).
-4. Enter an app name (e.g. `GitHub Birthday Wisher`) and click **Create**.
-5. Copy the generated **16-character passcode** (e.g., `abcd efgh ijkl mnop`).
+4. Create an app password for `Mail` and copy the 16-character passcode.
+5. Store it as the `PASSWORD` secret in your GitHub repository (see Step 3).
 </details>
 
 ---
 
 ### Step 2: Prepare Birthday Database
 
-Create a CSV dataset containing your contacts' birthdays. 
+Create a CSV file with the following format:
 
-#### CSV Format (`birthdays.csv`):
 ```csv
 name,email,year,month,day
 Alice,alice@example.com,1995,7,26
@@ -137,58 +177,144 @@ Bob,bob@example.com,1998,12,15
 Charlie,charlie@example.com,2001,5,3
 ```
 
-#### Encrypt to Base64 (Optional but Recommended):
-To keep contact details private on GitHub, convert your CSV file to a Base64 string:
+| Column | Type | Description |
+|--------|------|-------------|
+| `name` | String | Person's name (used in the `[NAME]` template placeholder) |
+| `email` | String | Recipient's email address |
+| `year` | Integer | Birth year |
+| `month` | Integer | Birth month (1–12) |
+| `day` | Integer | Birth day (1–31) |
 
-- **Linux / macOS**:
-  ```bash
-  base64 -w 0 birthdays.csv
-  ```
-- **Windows (PowerShell)**:
-  ```powershell
-  [Convert]::ToBase64String([IO.File]::ReadAllBytes("birthdays.csv"))
-  ```
+#### Encrypt to Base64 (Recommended)
+
+To keep contact details **private**, encode your CSV to Base64 before storing as a GitHub secret:
+
+**Linux / macOS:**
+```bash
+base64 -w 0 birthdays.csv
+```
+
+**Windows (PowerShell):**
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("birthdays.csv"))
+```
+
+Copy the output string — this becomes your `BIRTHDAYS_CSV_DATA` secret.
 
 ---
 
 ### Step 3: Configure GitHub Repository Secrets
 
-1. Open your repository on GitHub.
-2. Navigate to **Settings** > **Secrets and variables** > **Actions**.
-3. Add the following **Repository Secrets**:
+Navigate to your repository: **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
 
-**If using Gmail API (Recommended):**
+#### Required Secrets (Gmail API — Recommended)
 
-| Secret Name | Value Description |
-| :--- | :--- |
-| `GMAIL_TOKEN_JSON` | OAuth2 token JSON (from `setup_gmail_token.py`) |
-| `GMAIL_CREDENTIALS_JSON` | OAuth client credentials JSON (from Google Cloud Console) |
-| `BIRTHDAYS_CSV_DATA` | Base64-encoded string or raw content of `birthdays.csv` |
+| Secret Name | Description | How to Get It |
+|:---|:---|:---|
+| `GMAIL_TOKEN_JSON` | OAuth2 token with refresh token | Generated by `setup_gmail_token.py` ([guide](SETUP_GMAIL_API.md)) |
+| `GMAIL_CREDENTIALS_JSON` | OAuth2 client credentials | Downloaded from Google Cloud Console ([guide](SETUP_GMAIL_API.md)) |
+| `BIRTHDAYS_CSV_DATA` | Base64-encoded birthday database | Encoded from your `birthdays.csv` (see Step 2) |
 
-**If using App Password (Legacy):**
+#### Optional Secrets
 
-| Secret Name | Value Description | Example |
-| :--- | :--- | :--- |
-| `EMAIL` | Your sender Gmail address | `yourname@gmail.com` |
-| `PASSWORD` | 16-character Google App Password | `abcdefghijklmnop` |
-| `BIRTHDAYS_CSV_DATA` | Base64-encoded string or raw content of `birthdays.csv` | `bmFtZSxlbWFpbC...` |
+| Secret Name | Description | Default |
+|:---|:---|:---|
+| `NOTIFY_EMAIL` | Email address to receive daily birthday summary notifications | *(must be set — no default is used if not provided)* |
+
+#### Legacy Secrets (App Password — only if not using Gmail API)
+
+| Secret Name | Description |
+|:---|:---|
+| `EMAIL` | Your sender Gmail address |
+| `PASSWORD` | 16-character Google App Password |
+
+> [!IMPORTANT]
+> **Never** paste actual passwords, tokens, or email addresses in your code or README. All sensitive values belong in **GitHub Repository Secrets** which are encrypted and hidden from logs.
 
 ---
 
-### Step 4: Enable & Test GitHub Actions Workflow
+### Step 4: Enable & Test the Workflow
 
-1. Go to the **Actions** tab in your repository.
-2. Select **Birthday Wisher** workflow.
-3. Click **Run workflow** > **Run workflow** to test execution manually.
-4. The workflow will automatically run every day at **7:00 AM IST** (`27 0 * * *` UTC).
+1. Go to the **Actions** tab in your GitHub repository.
+2. Select the **Birthday Wisher** workflow from the sidebar.
+3. Click **Run workflow** → **Run workflow** to trigger a manual test run.
+4. Check the workflow logs — you should see:
+   ```
+   Gmail API credentials detected. Using OAuth2 authentication...
+   Gmail API: Access token refreshed successfully.
+   Gmail API: Service authenticated successfully!
+   Authentication method: Gmail API (OAuth2)
+   ```
+5. Once verified, the workflow will **automatically run daily** at ~6:00 AM IST.
+
+---
+
+## 🔐 Security & Privacy
+
+This project is designed with security in mind. Here's how sensitive data is handled:
+
+| Data | Protection Method |
+|------|-------------------|
+| **Gmail OAuth2 Tokens** | Stored as encrypted GitHub Secrets (`GMAIL_TOKEN_JSON`). Never committed to the repo. Listed in `.gitignore`. |
+| **Gmail Client Credentials** | Stored as encrypted GitHub Secrets (`GMAIL_CREDENTIALS_JSON`). Never committed to the repo. Listed in `.gitignore`. |
+| **Birthday Database** | Stored as a Base64-encoded GitHub Secret (`BIRTHDAYS_CSV_DATA`). Decoded only at runtime inside the GitHub Actions runner. |
+| **App Password (Legacy)** | Stored as encrypted GitHub Secret (`PASSWORD`). Masked in workflow logs by GitHub. |
+| **Email Addresses** | No personal email addresses are hardcoded in the source code. All are loaded from secrets or the encrypted CSV. |
+
+### Files Excluded from Git (`.gitignore`)
+
+```
+credentials.json      # Google OAuth2 client credentials
+token.json            # OAuth2 access + refresh token
+secret.txt            # Local CSV fallback file
+.env                  # Environment variable files
+```
+
+> [!CAUTION]
+> If you fork this repository, **do not** commit your `credentials.json`, `token.json`, `birthdays.csv`, or any file containing personal data. Always use GitHub Secrets for sensitive information.
+
+---
+
+## 📧 How Email Authentication Works
+
+The system supports two authentication methods, with automatic fallback:
+
+```mermaid
+flowchart LR
+    A[Start] --> B{GMAIL_TOKEN_JSON<br/>secret exists?}
+    B -- Yes --> C[Gmail API OAuth2<br/>✅ Recommended]
+    B -- No --> D{EMAIL + PASSWORD<br/>secrets exist?}
+    D -- Yes --> E[SMTP App Password<br/>⚠️ Legacy Fallback]
+    D -- No --> F[❌ Error: No auth<br/>method configured]
+    C --> G[Send Emails]
+    E --> G
+```
+
+### Gmail API OAuth2 (Recommended)
+
+- **How it works**: Uses a long-lived **refresh token** stored in `GMAIL_TOKEN_JSON` to obtain short-lived access tokens automatically.
+- **Token lifecycle**: Refresh tokens are permanent — they only expire if you revoke them manually or your Google Cloud project is deleted.
+- **Scope**: Only requests `gmail.send` permission — the minimum required to send emails.
+- **Module**: `gmail_auth.py` handles all OAuth2 logic including token refresh.
+
+### SMTP App Password (Legacy Fallback)
+
+- **How it works**: Connects to `smtp.gmail.com:587` using TLS and authenticates with your Gmail address + 16-character App Password.
+- **Known issue**: App Passwords expire when you change your Google password, toggle 2-Step Verification, or when Google revokes them — causing recurring **535 Bad Credentials** errors.
+- **Retry logic**: Automatically retries up to 3 times with 2-second delays for transient network failures.
 
 ---
 
 ## 💌 Customizing Email Templates
 
-Templates are stored in the `letter_templates/` directory. You can add or edit templates using the `[NAME]` placeholder:
+Templates are stored in the `letter_templates/` directory. The script randomly selects one template for each birthday person.
 
-#### Example `letter_1.txt`:
+### Template Placeholder
+
+Use `[NAME]` in your template — it will be replaced with the birthday person's name from the CSV.
+
+### Example Template
+
 ```text
 Dear [NAME],
 
@@ -200,39 +326,106 @@ Best wishes,
 Automated Birthday Wisher
 ```
 
-The script automatically selects a random template (`letter_1.txt`, `letter_2.txt`, `letter_3.txt`) for each birthday person.
+### Adding More Templates
+
+1. Create a new file: `letter_templates/letter_4.txt`
+2. Update the random range in `main.py` line:
+   ```python
+   file_path = f"letter_templates/letter_{random.randint(1, 4)}.txt"
+   ```
+3. Commit and push your changes.
+
+---
+
+## 📢 Notification Summary Emails
+
+After sending birthday wishes, the bot sends a **summary notification email** to the address configured in the `NOTIFY_EMAIL` secret. This email includes:
+
+- 📋 List of today's birthday celebrants (name + email)
+- ✅ Number of wishes sent successfully
+- ❌ Number of failed sends (with error details)
+- 📊 Total birthdays found for the day
+
+To configure, set the `NOTIFY_EMAIL` secret in your GitHub repository settings.
 
 ---
 
 ## 💻 Local Setup & Development
 
-Want to test or run the script locally on your machine?
+### Prerequisites
+
+- Python 3.12+
+- pip package manager
+- A Gmail account with Gmail API OAuth2 configured (see [SETUP_GMAIL_API.md](SETUP_GMAIL_API.md))
+
+### Setup
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/Automatic_Birthday_Wisher.git
-cd Automatic_Birthday_Wisher
+git clone https://github.com/ragul-r-v/birthday-wisher.git
+cd birthday-wisher
 
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Create your local birthdays.csv file
-# Add your birthdays.csv directly in the project root
+# 3. Place your birthdays.csv in the project root
+# (See Step 2 in Quick Start for the CSV format)
 
-# 4. Set environment variables & run
+# 4. Set up Gmail API authentication (one-time)
+python setup_gmail_token.py
+# Follow the browser prompt to authorize
+
+# 5. Run with Gmail API (recommended)
+# Set the token as an environment variable:
 # Windows (PowerShell):
-$env:EMAIL="yourname@gmail.com"
-$env:PASSWORD="your16charapppassword"
+$env:GMAIL_TOKEN_JSON = Get-Content token.json -Raw
+python main.py
+
+# Linux / macOS:
+export GMAIL_TOKEN_JSON=$(cat token.json)
+python main.py
+```
+
+<details>
+<summary><b>Running with SMTP App Password (Legacy)</b></summary>
+
+```bash
+# Windows (PowerShell):
+$env:EMAIL = "yourname@gmail.com"
+$env:PASSWORD = "your16charapppassword"
 python main.py
 
 # Linux / macOS:
 export EMAIL="yourname@gmail.com"
 export PASSWORD="your16charapppassword"
 python main.py
-
-# 5. Run Unit Tests (8 Test Cases)
-python -m unittest test_main.py
 ```
+
+</details>
+
+---
+
+## 🧪 Testing
+
+The project includes **10 comprehensive unit tests** covering all critical paths:
+
+```bash
+# Run all tests
+python -m unittest test_main.py -v
+```
+
+| Test | Description |
+|------|-------------|
+| 1. Credential Sanitization | Verifies quotes, spaces, tabs, and zero-width Unicode chars are stripped from credentials |
+| 2. Successful SMTP Wishes | Verifies email sending via SMTP when credentials are valid |
+| 3. SMTP Auth Failure | Verifies proper handling of 535 Bad Credentials error |
+| 4. Missing Environment Vars | Verifies error handling when no auth method is available |
+| 5. SMTP Transient Retry | Verifies retry logic recovers from transient network drops |
+| 6. Empty Birthday List | Verifies clean exit (code 0) when no birthdays match today |
+| 7. Partial Send Failure | Verifies system handles individual send failures without crashing |
+| 8. CSV Decode | Verifies Base64 encoding/decoding of birthday CSV data |
+| 9. Gmail API Send | Verifies email sending via Gmail API OAuth2 path (mocked) |
+| 10. Gmail API Fallback | Verifies automatic fallback to SMTP when Gmail API is not configured |
 
 ---
 
@@ -243,15 +436,15 @@ python -m unittest test_main.py
 
 <br/>
 
-**Cause:** App Password expired, or you're using a regular Gmail password, or 2FA was toggled.
+**Cause:** Your App Password has expired or is invalid. This is the most common issue with SMTP authentication.
 
 **Permanent Fix (Recommended):**
-Switch to **Gmail API with OAuth2** — follow [SETUP_GMAIL_API.md](SETUP_GMAIL_API.md). This eliminates 535 errors permanently.
+Switch to **Gmail API with OAuth2** — follow [SETUP_GMAIL_API.md](SETUP_GMAIL_API.md). OAuth2 refresh tokens don't expire, permanently eliminating this error.
 
-**Quick Fix (Temporary):**
-1. Enable 2-Step Verification on your Google Account.
-2. Generate a new **App Password** at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
-3. Update your `PASSWORD` secret in GitHub Repository Secrets.
+**Temporary Fix:**
+1. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+2. Generate a new App Password.
+3. Update the `PASSWORD` secret in your GitHub repository.
 </details>
 
 <details>
@@ -259,9 +452,45 @@ Switch to **Gmail API with OAuth2** — follow [SETUP_GMAIL_API.md](SETUP_GMAIL_
 
 <br/>
 
-**Cause:** The workflow cannot find the `BIRTHDAYS_CSV_DATA` secret in GitHub.
+**Cause:** The workflow can't find the birthday database secret.
 
-**Fix:** Ensure you created `BIRTHDAYS_CSV_DATA` or `BIRTHDAYS_CSV` in **Settings > Secrets and variables > Actions**.
+**Fix:** Ensure you created `BIRTHDAYS_CSV_DATA` in **Settings > Secrets and variables > Actions** with either the Base64-encoded or raw CSV content.
+</details>
+
+<details>
+<summary><b>❌ Error: GMAIL_TOKEN_JSON is missing required fields</b></summary>
+
+<br/>
+
+**Cause:** The token JSON is incomplete or corrupted.
+
+**Fix:** Re-run `python setup_gmail_token.py` locally to generate a fresh token, then update the `GMAIL_TOKEN_JSON` secret.
+</details>
+
+<details>
+<summary><b>❌ Error: Failed to refresh Gmail API access token</b></summary>
+
+<br/>
+
+**Cause:** The OAuth2 refresh token was revoked (e.g., you removed the app from your Google account permissions).
+
+**Fix:**
+1. Re-run `python setup_gmail_token.py` locally.
+2. Complete the browser authorization.
+3. Update the `GMAIL_TOKEN_JSON` secret with the new token.
+</details>
+
+<details>
+<summary><b>❌ Access blocked: Birthday Wisher has not completed Google verification</b></summary>
+
+<br/>
+
+**Cause:** Your Gmail address is not listed as a test user in the Google Cloud OAuth consent screen.
+
+**Fix:**
+1. Go to [Google Cloud Console → OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent).
+2. Scroll to **Test users** → **Add users**.
+3. Add your Gmail address and save.
 </details>
 
 <details>
@@ -269,7 +498,26 @@ Switch to **Gmail API with OAuth2** — follow [SETUP_GMAIL_API.md](SETUP_GMAIL_
 
 <br/>
 
-GitHub Actions cron schedules run on shared runners and may be delayed by a few minutes during peak times. The script uses explicit **IST Timezone (`Asia/Kolkata`)** evaluation to ensure dates are always accurate regardless of delays.
+GitHub Actions cron schedules run on shared runners and may be delayed by a few minutes during peak times. The script uses explicit **IST Timezone (`Asia/Kolkata`)** evaluation internally, so dates are always calculated accurately regardless of runner timing delays.
+</details>
+
+<details>
+<summary><b>🔄 How do I switch from App Password to Gmail API?</b></summary>
+
+<br/>
+
+1. Follow the [SETUP_GMAIL_API.md](SETUP_GMAIL_API.md) guide to generate OAuth2 credentials.
+2. Add `GMAIL_TOKEN_JSON` and `GMAIL_CREDENTIALS_JSON` secrets to your repository.
+3. The workflow will **automatically** use Gmail API when these secrets are present.
+4. You can optionally delete the old `EMAIL` and `PASSWORD` secrets once Gmail API is verified.
+</details>
+
+<details>
+<summary><b>📧 How do I change the notification email address?</b></summary>
+
+<br/>
+
+Set the `NOTIFY_EMAIL` secret in your GitHub repository (**Settings → Secrets → Actions → New secret**) to any email address where you want to receive daily birthday summary notifications.
 </details>
 
 ---
@@ -279,5 +527,8 @@ GitHub Actions cron schedules run on shared runners and may be delayed by a few 
 Distributed under the **MIT License**. See `LICENSE` for more information.
 
 <div align="center">
+  <br/>
   <sub>Built with ❤️ & Python for effortless birthday celebrations.</sub>
+  <br/><br/>
+  <sub>⭐ Star this repo if you find it useful!</sub>
 </div>

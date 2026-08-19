@@ -6,7 +6,9 @@ __pycache__/
 .vscode/
 # Logs
 *.log
+# Sensitive data (contains personal emails/info — use GitHub Secrets instead)
 secret.txt
+birthdays.csv
 # Gmail API OAuth2 credentials (never commit these)
 token.json
 credentials.json

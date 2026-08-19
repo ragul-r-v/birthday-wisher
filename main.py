@@ -160,7 +160,7 @@ def run():
     today = get_today_date()
     RAW_EMAIL = os.environ.get("EMAIL")
     RAW_PASSWORD = os.environ.get("PASSWORD")
-    NOTIFY_EMAIL = sanitize_email(os.environ.get("NOTIFY_EMAIL", "t.v.malathi2001@gmail.com"))
+    NOTIFY_EMAIL = sanitize_email(os.environ.get("NOTIFY_EMAIL", ""))
 
     # Determine authentication method: Gmail API (preferred) or SMTP (fallback)
     gmail_service = None
