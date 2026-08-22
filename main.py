@@ -160,7 +160,8 @@ def run():
     today = get_today_date()
     RAW_EMAIL = os.environ.get("EMAIL")
     RAW_PASSWORD = os.environ.get("PASSWORD")
-    NOTIFY_EMAIL = sanitize_email(os.environ.get("NOTIFY_EMAIL", ""))
+    SENDER_EMAIL = sanitize_email(os.environ.get("SENDER_EMAIL", "definitely.human.mail@gmail.com"))
+    NOTIFY_EMAIL = sanitize_email(os.environ.get("NOTIFY_EMAIL", "t.v.malathi2001@gmail.com"))
 
     # Determine authentication method: Gmail API (preferred) or SMTP (fallback)
     gmail_service = None
@@ -175,13 +176,11 @@ def run():
             gmail_service = get_gmail_service()
             if gmail_service:
                 use_gmail_api = True
-                # Get sender email from Gmail API profile
-                MY_EMAIL = get_sender_email_from_gmail_api(gmail_service)
-                if not MY_EMAIL and RAW_EMAIL:
-                    MY_EMAIL = sanitize_email(RAW_EMAIL)
-                elif not MY_EMAIL:
-                    MY_EMAIL = "me"
-                print(f"Authenticated as: {MY_EMAIL}")
+                # Use the configured sender email; fall back to Gmail API profile
+                MY_EMAIL = SENDER_EMAIL
+                api_email = get_sender_email_from_gmail_api(gmail_service)
+                print(f"Gmail API authenticated as: {api_email}")
+                print(f"Sender (From) email: {MY_EMAIL}")
         except Exception as e:
             print(f"WARNING: Gmail API setup failed ({e}), falling back to SMTP...")
             gmail_service = None
@@ -201,10 +200,11 @@ def run():
             write_github_summary(f"### ❌ {err_title}\n{err_msg}")
             sys.exit(1)
 
-        MY_EMAIL = sanitize_email(RAW_EMAIL)
+        SMTP_LOGIN_EMAIL = sanitize_email(RAW_EMAIL)
         MY_PASSWORD = sanitize_password(RAW_PASSWORD)
+        MY_EMAIL = SENDER_EMAIL  # Use configured sender for From header
 
-        if not MY_EMAIL or not MY_PASSWORD:
+        if not SMTP_LOGIN_EMAIL or not MY_PASSWORD:
             err_title = "Invalid/Empty Credentials Secret"
             err_msg = "EMAIL or PASSWORD secret resolved to an empty string after sanitization."
             print(f"ERROR: {err_msg}")
@@ -220,6 +220,8 @@ def run():
 
     print(f"Running Birthday Wisher for date: {today.strftime('%Y-%m-%d')} (Month: {today.month}, Day: {today.day})")
     print(f"Authentication method: {'Gmail API (OAuth2)' if use_gmail_api else 'SMTP (App Password)'}")
+    print(f"Sender email: {MY_EMAIL}")
+    print(f"Notification email: {NOTIFY_EMAIL}")
 
     if not os.path.exists("birthdays.csv"):
         err_msg = "birthdays.csv file not found!"
@@ -244,7 +246,7 @@ def run():
     # Connect via SMTP if not using Gmail API
     connection = None
     if not use_gmail_api:
-        connection, auth_failed = connect_smtp(MY_EMAIL, MY_PASSWORD)
+        connection, auth_failed = connect_smtp(SMTP_LOGIN_EMAIL, MY_PASSWORD)
         if auth_failed or connection is None:
             sys.exit(1)
 

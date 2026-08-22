@@ -43,11 +43,11 @@ class TestBirthdayWisher(unittest.TestCase):
         self.assertEqual(main.sanitize_password(raw_pass), "abcdefghijklmnop")
 
     @patch("smtplib.SMTP")
-    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "notify@example.com"}, clear=False)
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "notify@example.com", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False)
     def test_successful_wishes_smtp(self, mock_smtp_class):
         """Test Case 2: Verifies successful execution and email sending via SMTP when credentials are valid."""
         # Ensure Gmail API env vars are absent so SMTP path is taken
-        env = {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "notify@example.com"}
+        env = {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "notify@example.com", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}
         mock_smtp = MagicMock()
         mock_smtp_class.return_value = mock_smtp
 
@@ -59,7 +59,7 @@ class TestBirthdayWisher(unittest.TestCase):
         self.assertGreaterEqual(mock_smtp.send_message.call_count, 1)
 
     @patch("smtplib.SMTP")
-    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "wrongpassword123", "GITHUB_ACTIONS": "true"}, clear=False)
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "wrongpassword123", "GITHUB_ACTIONS": "true", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False)
     def test_smtp_auth_failure(self, mock_smtp_class):
         """Test Case 3: Verifies handling of 535 Bad Credentials (SMTPAuthenticationError)."""
         import smtplib
@@ -67,7 +67,7 @@ class TestBirthdayWisher(unittest.TestCase):
         mock_smtp.login.side_effect = smtplib.SMTPAuthenticationError(535, b"5.7.8 Username and Password not accepted")
         mock_smtp_class.return_value = mock_smtp
 
-        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "wrongpassword123", "GITHUB_ACTIONS": "true"}, clear=False):
+        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "wrongpassword123", "GITHUB_ACTIONS": "true", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False):
             os.environ.pop("GMAIL_TOKEN_JSON", None)
             with self.assertRaises(SystemExit) as cm:
                 main.run()
@@ -82,7 +82,7 @@ class TestBirthdayWisher(unittest.TestCase):
 
     @patch("smtplib.SMTP")
     @patch("time.sleep", return_value=None)
-    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop"}, clear=False)
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False)
     def test_smtp_transient_retry(self, mock_sleep, mock_smtp_class):
         """Test Case 5: Verifies SMTP retry connection logic when transient network drop occurs on first attempt."""
         import smtplib
@@ -94,7 +94,7 @@ class TestBirthdayWisher(unittest.TestCase):
         # Fail on attempt 1, succeed on attempt 2
         mock_smtp_class.side_effect = [mock_smtp_fail, mock_smtp_success]
 
-        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop"}, clear=False):
+        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False):
             os.environ.pop("GMAIL_TOKEN_JSON", None)
             main.run()
         self.assertEqual(mock_smtp_class.call_count, 2)
@@ -108,14 +108,14 @@ class TestBirthdayWisher(unittest.TestCase):
         ])
         df.to_csv("birthdays.csv", index=False)
 
-        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop"}, clear=False):
+        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False):
             os.environ.pop("GMAIL_TOKEN_JSON", None)
             with self.assertRaises(SystemExit) as cm:
                 main.run()
         self.assertEqual(cm.exception.code, 0)
 
     @patch("smtplib.SMTP")
-    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "admin@example.com"}, clear=False)
+    @patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "admin@example.com", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False)
     def test_partial_send_failure(self, mock_smtp_class):
         """Test Case 7: Verifies system handles send failure for 1 contact without crashing summary email."""
         mock_smtp = MagicMock()
@@ -123,7 +123,7 @@ class TestBirthdayWisher(unittest.TestCase):
         mock_smtp.send_message.side_effect = [Exception("Invalid Recipient Address"), None]
         mock_smtp_class.return_value = mock_smtp
 
-        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "admin@example.com"}, clear=False):
+        with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "NOTIFY_EMAIL": "admin@example.com", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False):
             os.environ.pop("GMAIL_TOKEN_JSON", None)
             main.run()
         self.assertEqual(mock_smtp.send_message.call_count, 2)
@@ -150,7 +150,7 @@ class TestBirthdayWisher(unittest.TestCase):
         mock_gmail_auth.get_gmail_service.return_value = mock_service
 
         token_json = '{"refresh_token":"test","client_id":"test","client_secret":"test","token":"test"}'
-        with patch.dict(os.environ, {"GMAIL_TOKEN_JSON": token_json, "NOTIFY_EMAIL": "notify@example.com"}, clear=False):
+        with patch.dict(os.environ, {"GMAIL_TOKEN_JSON": token_json, "NOTIFY_EMAIL": "notify@example.com", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False):
             with patch.dict('sys.modules', {'gmail_auth': mock_gmail_auth}):
                 main.run()
 
@@ -166,7 +166,7 @@ class TestBirthdayWisher(unittest.TestCase):
             mock_smtp = MagicMock()
             mock_smtp_class.return_value = mock_smtp
 
-            with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop"}, clear=False):
+            with patch.dict(os.environ, {"EMAIL": "sender@gmail.com", "PASSWORD": "abcdefghijklmnop", "SENDER_EMAIL": "definitely.human.mail@gmail.com"}, clear=False):
                 os.environ.pop("GMAIL_TOKEN_JSON", None)
                 main.run()
 
